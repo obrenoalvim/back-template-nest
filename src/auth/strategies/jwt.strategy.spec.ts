@@ -6,12 +6,12 @@ function fakeConfig(values: Record<string, unknown>): ConfigService {
 }
 
 describe('JwtStrategy', () => {
-  it('maps a decoded payload to an AuthenticatedUser', async () => {
+  it('maps a decoded payload to an AuthenticatedUser', () => {
     const strategy = new JwtStrategy(
       fakeConfig({ JWT_SECRET: 'a'.repeat(32) }),
     );
 
-    const result = await strategy.validate({ sub: 'user-1', email: 'a@b.com' });
+    const result = strategy.validate({ sub: 'user-1', email: 'a@b.com' });
 
     expect(result).toEqual({ id: 'user-1', email: 'a@b.com' });
   });

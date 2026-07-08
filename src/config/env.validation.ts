@@ -41,11 +41,9 @@ export const envValidationSchema = Joi.object({
 }).unknown(true); // allow POSTGRES_* (docker-compose-only vars) and other host env vars through
 
 export function validateEnv(config: Record<string, unknown>): EnvConfig {
-  const { error, value } = envValidationSchema.validate(config, {
-    abortEarly: false,
-  });
-  if (error) {
-    throw new Error(`Config validation error: ${error.message}`);
+  const result = envValidationSchema.validate(config, { abortEarly: false });
+  if (result.error) {
+    throw new Error(`Config validation error: ${result.error.message}`);
   }
-  return value as EnvConfig;
+  return result.value as EnvConfig;
 }
