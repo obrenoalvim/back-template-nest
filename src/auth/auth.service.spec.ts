@@ -176,4 +176,62 @@ describe('AuthService', () => {
       await expect(service.verifyEmail('tok')).rejects.toThrow();
     });
   });
+
+  describe('forgotPassword', () => {
+    it('creates a reset token and emails it when the user exists', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+        id: 'user-1',
+        email: 'a@b.com',
+      });
+
+      const result = await service.forgotPassword('a@b.com');
+
+      expect(result).toEqual({ sent: true });
+      expect(prisma.passwordResetToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ userId: 'user-1' }),
+        }),
+      );
+      expect(emailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        'a@b.com',
+        expect.any(String),
+      );
+    });
+
+    it('returns sent:true without emailing when no user exists, to avoid leaking registered emails', async () => {
+      (prisma.user.findUnique as jest.Mock).mockResolvedValue(null);
+
+      const result = await service.forgotPassword('missing@b.com');
+
+      expect(result).toEqual({ sent: true });
+      expect(emailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('updates the password and deletes the token when valid and unexpired', async () => {
+      (prisma.passwordResetToken.findUnique as jest.Mock).mockResolvedValue({
+        token: 'tok',
+        userId: 'user-1',
+        expiresAt: new Date(Date.now() + 60_000),
+      });
+
+      const result = await service.resetPassword('tok', 'new-password123');
+
+      expect(result).toEqual({ reset: true });
+      expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('throws when the token has expired', async () => {
+      (prisma.passwordResetToken.findUnique as jest.Mock).mockResolvedValue({
+        token: 'tok',
+        userId: 'user-1',
+        expiresAt: new Date(Date.now() - 60_000),
+      });
+
+      await expect(
+        service.resetPassword('tok', 'new-password123'),
+      ).rejects.toThrow();
+    });
+  });
 });

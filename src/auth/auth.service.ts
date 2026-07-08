@@ -12,6 +12,7 @@ import { RegisterDto } from './dto/register.dto';
 import { AuthenticatedUser } from './types/authenticated-user.type';
 
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
 
 @Injectable()
 export class AuthService {
@@ -85,5 +86,48 @@ export class AuthService {
     ]);
 
     return { verified: true };
+  }
+
+  async forgotPassword(email: string): Promise<{ sent: true }> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    // Always report success — don't let this endpoint reveal which emails are registered.
+    if (!user) {
+      return { sent: true };
+    }
+
+    const token = randomBytes(32).toString('hex');
+    await this.prisma.passwordResetToken.create({
+      data: {
+        token,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS),
+      },
+    });
+    await this.emailService.sendPasswordResetEmail(user.email, token);
+
+    return { sent: true };
+  }
+
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ reset: true }> {
+    const record = await this.prisma.passwordResetToken.findUnique({
+      where: { token },
+    });
+    if (!record || record.expiresAt < new Date()) {
+      throw new BadRequestException('Invalid or expired reset token');
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: record.userId },
+        data: { password: hashed },
+      }),
+      this.prisma.passwordResetToken.delete({ where: { token } }),
+    ]);
+
+    return { reset: true };
   }
 }
