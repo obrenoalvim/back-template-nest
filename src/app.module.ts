@@ -9,6 +9,7 @@ import { createLoggerOptions } from './logger/logger.config';
 import { EmailModule } from './email/email.module';
 import { AuthModule } from './auth/auth.module';
 import { AccountModule } from './account/account.module';
+import { NotesModule } from './notes/notes.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AccountModule } from './account/account.module';
     EmailModule,
     AuthModule,
     AccountModule,
+    NotesModule,
   ],
   controllers: [],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
