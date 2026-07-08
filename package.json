@@ -23,6 +23,8 @@
     "db:generate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
     "db:studio": "prisma studio",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
     "prepare": "husky || true"
   },
   "dependencies": {
