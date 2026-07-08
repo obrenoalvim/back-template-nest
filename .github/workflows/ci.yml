@@ -9,10 +9,31 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      # src/prisma/prisma.service.spec.ts is a real integration test (documented
+      # in its own describe title: "requires `docker compose up -d db`") that
+      # lives under src/ and runs as part of `npm test`, not just in the e2e
+      # job — it needs a reachable Postgres, same as the e2e job below.
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      # Placeholder only: `npm ci` triggers postinstall (`prisma generate`),
-      # which needs DATABASE_URL set to *something* — it never connects to it.
-      DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app
+      JWT_SECRET: ci-build-test-secret-must-be-at-least-32-characters-long
+      JWT_EXPIRES_IN: 15m
+      APP_URL: http://localhost:3000
+      LOG_LEVEL: warn
+      NODE_ENV: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
