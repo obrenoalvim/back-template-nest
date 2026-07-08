@@ -8,6 +8,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { createLoggerOptions } from './logger/logger.config';
 import { EmailModule } from './email/email.module';
 import { AuthModule } from './auth/auth.module';
+import { AccountModule } from './account/account.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AuthModule } from './auth/auth.module';
     PrismaModule,
     EmailModule,
     AuthModule,
+    AccountModule,
   ],
   controllers: [],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
