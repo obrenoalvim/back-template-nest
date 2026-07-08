@@ -60,6 +60,14 @@ export class AuthService {
     return { id: user.id, email: user.email };
   }
 
+  // jwtService.sign is synchronous; `async` keeps this method's shape consistent with
+  // the rest of the class and its declared `Promise<...>` return type.
+  // eslint-disable-next-line @typescript-eslint/require-await
+  async login(user: AuthenticatedUser): Promise<{ accessToken: string }> {
+    const payload = { sub: user.id, email: user.email };
+    return { accessToken: this.jwtService.sign(payload) };
+  }
+
   async verifyEmail(token: string): Promise<{ verified: true }> {
     const record = await this.prisma.verificationToken.findUnique({
       where: { token },

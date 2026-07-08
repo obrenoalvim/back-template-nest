@@ -132,6 +132,18 @@ describe('AuthService', () => {
     });
   });
 
+  describe('login', () => {
+    it('signs a JWT with the user id as sub and returns it as accessToken', async () => {
+      const result = await service.login({ id: 'user-1', email: 'a@b.com' });
+
+      expect(jwtService.sign).toHaveBeenCalledWith({
+        sub: 'user-1',
+        email: 'a@b.com',
+      });
+      expect(result).toEqual({ accessToken: 'signed-jwt' });
+    });
+  });
+
   describe('verifyEmail', () => {
     it('marks the user verified and deletes the token when the token is valid and unexpired', async () => {
       (prisma.verificationToken.findUnique as jest.Mock).mockResolvedValue({
