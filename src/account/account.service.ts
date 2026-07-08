@@ -7,7 +7,10 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 export class AccountService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async changePassword(userId: string, dto: ChangePasswordDto): Promise<{ changed: true }> {
+  async changePassword(
+    userId: string,
+    dto: ChangePasswordDto,
+  ): Promise<{ changed: true }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException('Account not found');
@@ -19,12 +22,18 @@ export class AccountService {
     }
 
     const hashed = await bcrypt.hash(dto.newPassword, 10);
-    await this.prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed },
+    });
 
     return { changed: true };
   }
 
-  async deleteAccount(userId: string, password: string): Promise<{ deleted: true }> {
+  async deleteAccount(
+    userId: string,
+    password: string,
+  ): Promise<{ deleted: true }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new UnauthorizedException('Account not found');

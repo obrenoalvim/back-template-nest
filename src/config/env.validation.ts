@@ -18,14 +18,18 @@ export interface EnvConfig {
 }
 
 export const envValidationSchema = Joi.object({
-  NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+  NODE_ENV: Joi.string()
+    .valid('development', 'production', 'test')
+    .default('development'),
   PORT: Joi.number().default(3000),
   DATABASE_URL: Joi.string()
     .uri({ scheme: ['postgresql', 'postgres'] })
     .required(),
   JWT_SECRET: Joi.string().min(32).required(),
   JWT_EXPIRES_IN: Joi.string().default('15m'),
-  LOG_LEVEL: Joi.string().valid('debug', 'info', 'warn', 'error').default('info'),
+  LOG_LEVEL: Joi.string()
+    .valid('debug', 'info', 'warn', 'error')
+    .default('info'),
   APP_URL: Joi.string().uri().default('http://localhost:3000'),
   THROTTLE_TTL: Joi.number().default(60),
   THROTTLE_LIMIT: Joi.number().default(100),
@@ -37,7 +41,9 @@ export const envValidationSchema = Joi.object({
 }).unknown(true); // allow POSTGRES_* (docker-compose-only vars) and other host env vars through
 
 export function validateEnv(config: Record<string, unknown>): EnvConfig {
-  const { error, value } = envValidationSchema.validate(config, { abortEarly: false });
+  const { error, value } = envValidationSchema.validate(config, {
+    abortEarly: false,
+  });
   if (error) {
     throw new Error(`Config validation error: ${error.message}`);
   }

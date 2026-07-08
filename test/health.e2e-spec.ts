@@ -14,7 +14,9 @@ describe('Health (e2e)', () => {
   });
 
   it('GET /api/health returns ok when the database is reachable', async () => {
-    const res = await request(app.getHttpServer()).get('/api/health').expect(200);
+    const res = await request(app.getHttpServer())
+      .get('/api/health')
+      .expect(200);
     expect(res.body).toEqual({ status: 'ok', database: 'up' });
   });
 });

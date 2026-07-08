@@ -21,12 +21,14 @@ describe('validateEnv', () => {
   });
 
   it('throws when JWT_SECRET is shorter than 32 characters', () => {
-    expect(() => validateEnv({ ...validConfig, JWT_SECRET: 'too-short' })).toThrow(
-      /JWT_SECRET/,
-    );
+    expect(() =>
+      validateEnv({ ...validConfig, JWT_SECRET: 'too-short' }),
+    ).toThrow(/JWT_SECRET/);
   });
 
   it('allows unrelated env vars through untouched (e.g. POSTGRES_* used only by docker-compose)', () => {
-    expect(() => validateEnv({ ...validConfig, POSTGRES_USER: 'postgres' })).not.toThrow();
+    expect(() =>
+      validateEnv({ ...validConfig, POSTGRES_USER: 'postgres' }),
+    ).not.toThrow();
   });
 });

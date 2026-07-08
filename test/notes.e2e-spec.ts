@@ -14,8 +14,12 @@ describe('Notes (e2e)', () => {
   beforeAll(async () => {
     ({ app, prisma } = await createTestApp());
 
-    await request(app.getHttpServer()).post('/api/auth/register').send({ email, password });
-    const loginRes = await request(app.getHttpServer()).post('/api/auth/login').send({ email, password });
+    await request(app.getHttpServer())
+      .post('/api/auth/register')
+      .send({ email, password });
+    const loginRes = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email, password });
     accessToken = loginRes.body.accessToken;
   });
 
@@ -39,7 +43,7 @@ describe('Notes (e2e)', () => {
     noteId = res.body.id;
   });
 
-  it('lists the user\'s notes', async () => {
+  it("lists the user's notes", async () => {
     const res = await request(app.getHttpServer())
       .get('/api/notes')
       .set('Authorization', `Bearer ${accessToken}`)

@@ -12,12 +12,18 @@ export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 
   @Patch('password')
-  changePassword(@CurrentUser() user: AuthenticatedUser, @Body() dto: ChangePasswordDto) {
+  changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
     return this.accountService.changePassword(user.id, dto);
   }
 
   @Delete()
-  deleteAccount(@CurrentUser() user: AuthenticatedUser, @Body() dto: DeleteAccountDto) {
+  deleteAccount(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: DeleteAccountDto,
+  ) {
     return this.accountService.deleteAccount(user.id, dto.password);
   }
 }
