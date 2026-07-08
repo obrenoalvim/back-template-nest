@@ -4,6 +4,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { createLoggerOptions } from './logger/logger.config';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { createLoggerOptions } from './logger/logger.config';
       useFactory: createLoggerOptions,
     }),
     PrismaModule,
+    EmailModule,
   ],
   controllers: [],
   providers: [],
