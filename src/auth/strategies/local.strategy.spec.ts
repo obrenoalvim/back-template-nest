@@ -15,11 +15,12 @@ describe('LocalStrategy', () => {
     authService.validateUser.mockResolvedValue({
       id: 'user-1',
       email: 'a@b.com',
+      role: 'user',
     });
 
     const result = await strategy.validate('a@b.com', 'password123');
 
-    expect(result).toEqual({ id: 'user-1', email: 'a@b.com' });
+    expect(result).toEqual({ id: 'user-1', email: 'a@b.com', role: 'user' });
   });
 
   it('throws UnauthorizedException when credentials are wrong', async () => {

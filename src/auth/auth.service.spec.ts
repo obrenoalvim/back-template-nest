@@ -103,11 +103,12 @@ describe('AuthService', () => {
         id: 'user-1',
         email: 'a@b.com',
         password: hashed,
+        role: 'user',
       });
 
       const result = await service.validateUser('a@b.com', 'password123');
 
-      expect(result).toEqual({ id: 'user-1', email: 'a@b.com' });
+      expect(result).toEqual({ id: 'user-1', email: 'a@b.com', role: 'user' });
     });
 
     it('returns null when the password does not match', async () => {
@@ -134,11 +135,16 @@ describe('AuthService', () => {
 
   describe('login', () => {
     it('signs a JWT with the user id as sub and returns it as accessToken', async () => {
-      const result = await service.login({ id: 'user-1', email: 'a@b.com' });
+      const result = await service.login({
+        id: 'user-1',
+        email: 'a@b.com',
+        role: 'user',
+      });
 
       expect(jwtService.sign).toHaveBeenCalledWith({
         sub: 'user-1',
         email: 'a@b.com',
+        role: 'user',
       });
       expect(result).toEqual({ accessToken: 'signed-jwt' });
     });

@@ -53,6 +53,10 @@ Ver `.env.example` pra lista completa e comentada. `src/config/env.validation.ts
 - `PATCH /api/account/password`, `DELETE /api/account` (ambos exigem JWT Bearer)
 - Todas as rotas protegidas usam `JwtAuthGuard` + `@CurrentUser()` (ver `src/auth`)
 
+## Roles
+
+Todo usuário tem um `role` (`'user'` | `'admin'`, default `'user'`) no model Prisma `User`, carregado como claim assinada no JWT — nunca confia num `role` vindo do body da requisição. `GET /api/admin/users` (admin-only, lista todos os usuários) é a referência pra proteger uma rota: `@UseGuards(JwtAuthGuard, RolesGuard)` + `@Roles('admin')` (`src/auth/guards/roles.guard.ts`, `src/auth/decorators/roles.decorator.ts`). Não tem jeito de virar admin sozinho — muda a coluna direto no banco (`UPDATE "User" SET role = 'admin' WHERE email = '...'`) pra testar localmente.
+
 ## Email
 
 Emails de verificação e reset de senha passam por `src/email/email.service.ts`. Sem `SMTP_HOST` setado, os emails são logados no console em vez de enviados — sem setup necessário pra testar o fluxo localmente.

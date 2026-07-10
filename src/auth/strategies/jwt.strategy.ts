@@ -7,6 +7,7 @@ import { AuthenticatedUser } from '../types/authenticated-user.type';
 interface JwtPayload {
   sub: string;
   email: string;
+  role: 'user' | 'admin';
 }
 
 @Injectable()
@@ -24,6 +25,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   validate(payload: JwtPayload): AuthenticatedUser {
-    return { id: payload.sub, email: payload.email };
+    return { id: payload.sub, email: payload.email, role: payload.role };
   }
 }
