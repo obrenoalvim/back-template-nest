@@ -61,6 +61,10 @@ Emails de verificação e reset de senha passam por `src/email/email.service.ts`
 
 `src/notes` (model Prisma pertencente ao usuário autenticado, validado via DTO, CRUD completo) é a implementação de referência pra copiar na tua primeira feature de verdade — apaga depois que não precisar mais da referência (remove o model `Note` do `prisma/schema.prisma` e gera uma migration).
 
+## Documentação da API
+
+Docs OpenAPI gerados a partir dos decorators do `@nestjs/swagger` nos controllers e DTOs. Com o app rodando, abre `http://localhost:3000/api/docs` pro Swagger UI interativo. Usa o botão "Authorize" com um JWT de `/api/auth/login` pra testar as rotas protegidas (`notes`, `account`).
+
 ## Testes
 
 - **Unit** (`npm test`): a maioria dos services é instanciada manualmente com dependências mockadas via jest — sem banco real. A exceção é `src/prisma/prisma.service.spec.ts`, um teste de integração de verdade (o título do próprio describe já diz isso) que precisa de um Postgres acessível; o job `build` do CI roda um serviço Postgres especificamente pra isso.
