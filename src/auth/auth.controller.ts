@@ -7,6 +7,7 @@ import { LoginDto } from './dto/login.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthenticatedUser } from './types/authenticated-user.type';
@@ -30,6 +31,19 @@ export class AuthController {
   @Post('login')
   login(@CurrentUser() user: AuthenticatedUser) {
     return this.authService.login(user);
+  }
+
+  @ApiOperation({ summary: 'Exchange a refresh token for a new token pair' })
+  @Throttle({ default: { limit: 6, ttl: 60000 } })
+  @Post('refresh')
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refresh(dto.refreshToken);
+  }
+
+  @ApiOperation({ summary: 'Revoke a refresh token' })
+  @Post('logout')
+  logout(@Body() dto: RefreshTokenDto) {
+    return this.authService.logout(dto.refreshToken);
   }
 
   @ApiOperation({ summary: 'Verify an email address with a token' })

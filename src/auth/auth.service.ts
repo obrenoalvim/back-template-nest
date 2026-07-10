@@ -2,9 +2,11 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { randomBytes } from 'crypto';
+import { ConfigService } from '@nestjs/config';
+import { createHash, randomBytes } from 'crypto';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
@@ -14,13 +16,43 @@ import { AuthenticatedUser } from './types/authenticated-user.type';
 const VERIFICATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
 
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly jwtService: JwtService,
+    private readonly config: ConfigService,
   ) {}
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  private async issueTokenPair(user: AuthenticatedUser): Promise<TokenPair> {
+    const accessToken = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    const refreshToken = randomBytes(32).toString('hex');
+    const refreshDays = this.config.get<number>('JWT_REFRESH_EXPIRES_DAYS', 30);
+    await this.prisma.refreshToken.create({
+      data: {
+        tokenHash: this.hashToken(refreshToken),
+        userId: user.id,
+        expiresAt: new Date(Date.now() + refreshDays * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    return { accessToken, refreshToken };
+  }
 
   async register(dto: RegisterDto): Promise<{ id: string; email: string }> {
     const existing = await this.prisma.user.findUnique({
@@ -61,12 +93,37 @@ export class AuthService {
     return { id: user.id, email: user.email, role: user.role };
   }
 
-  // jwtService.sign is synchronous; `async` keeps this method's shape consistent with
-  // the rest of the class and its declared `Promise<...>` return type.
-  // eslint-disable-next-line @typescript-eslint/require-await
-  async login(user: AuthenticatedUser): Promise<{ accessToken: string }> {
-    const payload = { sub: user.id, email: user.email, role: user.role };
-    return { accessToken: this.jwtService.sign(payload) };
+  async login(user: AuthenticatedUser): Promise<TokenPair> {
+    return this.issueTokenPair(user);
+  }
+
+  async refresh(refreshToken: string): Promise<TokenPair> {
+    const tokenHash = this.hashToken(refreshToken);
+    const record = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+      include: { user: true },
+    });
+    if (!record || record.expiresAt < new Date()) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Rotation: the old token is deleted the moment it's used, so a stolen-and-replayed
+    // refresh token stops working after the legitimate client's next refresh.
+    await this.prisma.refreshToken.delete({ where: { tokenHash } });
+
+    return this.issueTokenPair({
+      id: record.user.id,
+      email: record.user.email,
+      role: record.user.role,
+    });
+  }
+
+  async logout(refreshToken: string): Promise<{ loggedOut: true }> {
+    const tokenHash = this.hashToken(refreshToken);
+    await this.prisma.refreshToken
+      .delete({ where: { tokenHash } })
+      .catch(() => undefined); // already gone/invalid — logout is idempotent, don't leak
+    return { loggedOut: true };
   }
 
   async verifyEmail(token: string): Promise<{ verified: true }> {

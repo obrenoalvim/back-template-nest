@@ -50,8 +50,15 @@ See `.env.example` for the full, commented list. `src/config/env.validation.ts` 
 
 - `POST /api/auth/register`, `POST /api/auth/login` (register/login is rate limited to 5 requests/60s per IP, fixed and not env-configurable — see Design notes)
 - `GET /api/auth/verify-email?token=...`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`
+- `POST /api/auth/refresh`, `POST /api/auth/logout` — see [Sessions](#sessions) below
 - `PATCH /api/account/password`, `DELETE /api/account` (both require a Bearer JWT)
 - All protected routes use `JwtAuthGuard` + `@CurrentUser()` (see `src/auth`)
+
+## Sessions
+
+`login`/`refresh` return `{ accessToken, refreshToken }`. The access token is a short-lived JWT (`JWT_EXPIRES_IN`, default 15m) — it's what you send as `Authorization: Bearer <accessToken>`. The refresh token is a long-lived (`JWT_REFRESH_EXPIRES_DAYS`, default 30) opaque secret, stored **hashed** in the `RefreshToken` table (unlike the short-lived verification/reset tokens, this one is worth hashing — it's a 30-day bearer credential).
+
+`POST /api/auth/refresh` **rotates**: the old refresh token is deleted the moment a new pair is issued, so a stolen-and-replayed one stops working right after the legitimate client's next refresh. `POST /api/auth/logout` revokes a refresh token outright. Neither endpoint requires the access token — the refresh token in the body *is* the credential, same trust model as the `verify-email`/`reset-password` links.
 
 ## Roles
 

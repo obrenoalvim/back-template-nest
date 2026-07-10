@@ -22,6 +22,7 @@ model User {
   updatedAt           DateTime              @updatedAt
   verificationTokens  VerificationToken[]
   passwordResetTokens PasswordResetToken[]
+  refreshTokens       RefreshToken[]
   notes               Note[]
 }
 
@@ -37,6 +38,18 @@ model VerificationToken {
 model PasswordResetToken {
   id        String   @id @default(uuid())
   token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// Unlike VerificationToken/PasswordResetToken (short-lived, single-use links),
+// refresh tokens are long-lived bearer credentials — worth hashing at rest so a
+// DB leak alone doesn't hand out working sessions.
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime

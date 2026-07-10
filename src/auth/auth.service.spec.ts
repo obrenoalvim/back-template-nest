@@ -1,5 +1,6 @@
-import { ConflictException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcryptjs';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -9,11 +10,16 @@ describe('AuthService', () => {
   let prisma: jest.Mocked<
     Pick<
       PrismaService,
-      'user' | 'verificationToken' | 'passwordResetToken' | '$transaction'
+      | 'user'
+      | 'verificationToken'
+      | 'passwordResetToken'
+      | 'refreshToken'
+      | '$transaction'
     >
   >;
   let emailService: jest.Mocked<EmailService>;
   let jwtService: jest.Mocked<JwtService>;
+  let config: jest.Mocked<ConfigService>;
   let service: AuthService;
 
   beforeEach(() => {
@@ -33,13 +39,22 @@ describe('AuthService', () => {
         findUnique: jest.fn(),
         delete: jest.fn(),
       } as unknown as PrismaService['passwordResetToken'],
+      refreshToken: {
+        create: jest.fn(),
+        findUnique: jest.fn(),
+        delete: jest.fn(),
+      } as unknown as PrismaService['refreshToken'],
       $transaction: jest.fn((ops: unknown[]) =>
         Promise.all(ops as Promise<unknown>[]),
       ),
     } as unknown as jest.Mocked<
       Pick<
         PrismaService,
-        'user' | 'verificationToken' | 'passwordResetToken' | '$transaction'
+        | 'user'
+        | 'verificationToken'
+        | 'passwordResetToken'
+        | 'refreshToken'
+        | '$transaction'
       >
     >;
 
@@ -52,10 +67,17 @@ describe('AuthService', () => {
       sign: jest.fn().mockReturnValue('signed-jwt'),
     } as unknown as jest.Mocked<JwtService>;
 
+    config = {
+      get: jest.fn().mockReturnValue(30),
+    } as unknown as jest.Mocked<ConfigService>;
+
+    (prisma.refreshToken.create as jest.Mock).mockResolvedValue({});
+
     service = new AuthService(
       prisma as unknown as PrismaService,
       emailService,
       jwtService,
+      config,
     );
   });
 
@@ -134,7 +156,7 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('signs a JWT with the user id as sub and returns it as accessToken', async () => {
+    it('signs a JWT with the user id as sub, and issues+persists a refresh token', async () => {
       const result = await service.login({
         id: 'user-1',
         email: 'a@b.com',
@@ -146,7 +168,79 @@ describe('AuthService', () => {
         email: 'a@b.com',
         role: 'user',
       });
-      expect(result).toEqual({ accessToken: 'signed-jwt' });
+      expect(prisma.refreshToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ userId: 'user-1' }),
+        }),
+      );
+      expect(result).toEqual({
+        accessToken: 'signed-jwt',
+        refreshToken: expect.any(String),
+      });
+    });
+  });
+
+  describe('refresh', () => {
+    it('rotates a valid refresh token and issues a new pair', async () => {
+      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue({
+        tokenHash: 'hash',
+        userId: 'user-1',
+        expiresAt: new Date(Date.now() + 60_000),
+        user: { id: 'user-1', email: 'a@b.com', role: 'user' },
+      });
+
+      const result = await service.refresh('some-refresh-token');
+
+      expect(prisma.refreshToken.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { tokenHash: expect.any(String) } }),
+      );
+      expect(prisma.refreshToken.create).toHaveBeenCalled();
+      expect(result).toEqual({
+        accessToken: 'signed-jwt',
+        refreshToken: expect.any(String),
+      });
+    });
+
+    it('throws when the refresh token does not exist', async () => {
+      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue(null);
+
+      await expect(service.refresh('missing')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('throws when the refresh token has expired', async () => {
+      (prisma.refreshToken.findUnique as jest.Mock).mockResolvedValue({
+        tokenHash: 'hash',
+        userId: 'user-1',
+        expiresAt: new Date(Date.now() - 60_000),
+        user: { id: 'user-1', email: 'a@b.com', role: 'user' },
+      });
+
+      await expect(service.refresh('expired')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+  });
+
+  describe('logout', () => {
+    it('deletes the matching refresh token', async () => {
+      (prisma.refreshToken.delete as jest.Mock).mockResolvedValue({});
+
+      const result = await service.logout('some-refresh-token');
+
+      expect(prisma.refreshToken.delete).toHaveBeenCalled();
+      expect(result).toEqual({ loggedOut: true });
+    });
+
+    it('is idempotent when the refresh token is already gone', async () => {
+      (prisma.refreshToken.delete as jest.Mock).mockRejectedValue(
+        new Error('not found'),
+      );
+
+      await expect(service.logout('missing')).resolves.toEqual({
+        loggedOut: true,
+      });
     });
   });
 

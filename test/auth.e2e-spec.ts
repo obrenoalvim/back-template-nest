@@ -50,6 +50,38 @@ describe('Auth (e2e)', () => {
       .expect(401);
   });
 
+  it('rotates a refresh token and revokes it on logout', async () => {
+    const loginRes = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email, password })
+      .expect(201);
+    const { refreshToken } = loginRes.body as { refreshToken: string };
+
+    const refreshRes = await request(app.getHttpServer())
+      .post('/api/auth/refresh')
+      .send({ refreshToken })
+      .expect(201);
+    expect(refreshRes.body.accessToken).toEqual(expect.any(String));
+    expect(refreshRes.body.refreshToken).toEqual(expect.any(String));
+
+    // Rotation: the token just used is now dead.
+    await request(app.getHttpServer())
+      .post('/api/auth/refresh')
+      .send({ refreshToken })
+      .expect(401);
+
+    const newRefreshToken = refreshRes.body.refreshToken as string;
+    await request(app.getHttpServer())
+      .post('/api/auth/logout')
+      .send({ refreshToken: newRefreshToken })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/auth/refresh')
+      .send({ refreshToken: newRefreshToken })
+      .expect(401);
+  });
+
   it('verifies the email using the token stored in the database', async () => {
     const user = await prisma.user.findUniqueOrThrow({ where: { email } });
     const verification = await prisma.verificationToken.findFirstOrThrow({
