@@ -21,4 +21,16 @@ export class AdminController {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  @ApiOperation({ summary: 'List all notes with their owner (admin only)' })
+  @Get('notes')
+  notes() {
+    // include: { user } batches the owner lookup into one extra query total
+    // (not one per note) — see admin.e2e-spec.ts, which pins the measured
+    // query count so this can't silently regress into N+1.
+    return this.prisma.note.findMany({
+      include: { user: { select: { email: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

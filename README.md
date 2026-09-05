@@ -81,6 +81,10 @@ OpenAPI docs are generated from `@nestjs/swagger` decorators on controllers and 
 - **Unit** (`npm test`): most services are instantiated manually with jest-mocked dependencies, no real database. The one exception is `src/prisma/prisma.service.spec.ts`, a real integration check (its own describe title says so) that needs a reachable Postgres; CI's `build` job runs a Postgres service specifically for it.
 - **E2E** (`npm run test:e2e`): full `AppModule` + Supertest against a real Postgres, no mocks. Requires `docker compose up -d db && npm run db:migrate` first.
 
+## N+1 query guard
+
+`GET /api/admin/notes` (admin-only, lists every note with its owner's email) is a regression test target, not just an endpoint: `test/admin.e2e-spec.ts` seeds several notes for one owner, subscribes to `PrismaService`'s query log (`src/prisma/prisma.service.ts` enables `log: [{ emit: 'event', level: 'query' }]` for this), and asserts the exact number of SQL statements the request runs. The handler (`src/admin/admin.controller.ts`) uses Prisma's `include: { user: ... }` so the owner lookup is batched into one query total instead of one query per note. If someone later swaps that for a loop that fetches the owner per note, the query count grows with the seeded row count and the test goes red — before it ships, not after it's slow in production. It runs as part of the existing e2e suite, which CI already runs on every push and PR.
+
 ## Docker
 
 - `Dockerfile`: multi-stage (`deps` → `builder` → `runner`), runs as a non-root user, healthcheck hits `/api/health` via `127.0.0.1`.
