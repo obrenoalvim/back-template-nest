@@ -2,6 +2,8 @@ English | [Português](README.pt.md)
 
 # back-template-nest
 
+[![CI](https://github.com/obrenoalvim/back-template-nest/actions/workflows/ci.yml/badge.svg)](https://github.com/obrenoalvim/back-template-nest/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Production-ready base template for new backend projects: NestJS, TypeScript (strict), Postgres + Prisma, Passport (local + JWT) auth with email verification/password reset/rate limiting, nodemailer with a console fallback, structured logging via nestjs-pino, a full example CRUD resource (`notes`), and Docker + CI wired end to end.
 
 ## Stack
